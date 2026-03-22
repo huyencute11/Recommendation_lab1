@@ -57,9 +57,8 @@ def main():
         dataset,
         model_name=model_name,
         k=10,
-        learning_rate=0.001,
-        lambda_u=0.01,
-        lambda_i=0.01,
+        learning_rate=0.01,
+        lambda_reg=0.01,
         max_iter=100,
         verbose=True
     )

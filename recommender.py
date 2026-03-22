@@ -3,10 +3,7 @@ Recommendation System using Cornac
 Recommends top items for each user
 """
 import numpy as np
-from cornac.models import MF, BPR
-from cornac.models import NMF
-from cornac.metrics import Recall, Precision, NDCG, Rating
-from cornac.eval_strategies import RatioSplit
+from cornac.models import MF, BPR, NMF
 from data_loader import RecommendationDataLoader
 
 
@@ -35,28 +32,24 @@ class RecommenderSystem:
         # Default parameters for models
         mf_params = {
             'k': self.kwargs.get('k', 10),  # latent dimensions
-            'learning_rate': self.kwargs.get('learning_rate', 0.001),
-            'lambda_u': self.kwargs.get('lambda_u', 0.01),  # regularization for user
-            'lambda_i': self.kwargs.get('lambda_i', 0.01),  # regularization for item
+            'learning_rate': self.kwargs.get('learning_rate', 0.01),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),  # regularization
             'max_iter': self.kwargs.get('max_iter', 100),
             'verbose': self.kwargs.get('verbose', True)
         }
         
         bpr_params = {
             'k': self.kwargs.get('k', 10),
-            'learning_rate': self.kwargs.get('learning_rate', 0.001),
-            'lambda_u': self.kwargs.get('lambda_u', 0.01),
-            'lambda_i': self.kwargs.get('lambda_i', 0.01),
-            'lambda_j': self.kwargs.get('lambda_j', 0.01),
+            'learning_rate': self.kwargs.get('learning_rate', 0.01),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),
             'max_iter': self.kwargs.get('max_iter', 100),
             'verbose': self.kwargs.get('verbose', True)
         }
         
         nmf_params = {
             'k': self.kwargs.get('k', 10),
-            'learning_rate': self.kwargs.get('learning_rate', 0.001),
-            'lambda_u': self.kwargs.get('lambda_u', 0.01),
-            'lambda_i': self.kwargs.get('lambda_i', 0.01),
+            'learning_rate': self.kwargs.get('learning_rate', 0.01),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),
             'max_iter': self.kwargs.get('max_iter', 100),
             'verbose': self.kwargs.get('verbose', True)
         }
@@ -132,22 +125,35 @@ class RecommenderSystem:
         
         print(f"\nGenerating recommendations for all users...")
         
-        for user in self.dataset.users:
-            user_id = user.uid  # original user_id
-            user_iid = user.iid  # internal user_id
+        # user_ids is a list where index i gives the original user_id for internal index i
+        # item_ids is a list where index j gives the original item_id for internal index j
+        user_ids = self.dataset.user_ids
+        item_ids = self.dataset.item_ids
+        
+        # Get all users
+        num_users = self.dataset.num_users
+        
+        for user_iid in range(num_users):
+            # Get the original user ID
+            user_id = user_ids[user_iid]
             
             # Get scores for all items
             item_scores = []
-            for item in self.dataset.items:
-                item_iid = item.iid
-                score = self.model.score(user_iid, item_iid)
-                item_scores.append((item.uid, score))
+            num_items = self.dataset.num_items
+            
+            for item_iid in range(num_items):
+                try:
+                    score = self.model.score(user_iid, item_iid)
+                    item_id = item_ids[item_iid]
+                    item_scores.append((item_id, score))
+                except:
+                    continue
             
             # Sort by score and get top N
             item_scores.sort(key=lambda x: x[1], reverse=True)
-            top_items = [item_id for item_id, score in item_scores[:num_recommendations]]
+            top_items = [str(item_id) for item_id, score in item_scores[:num_recommendations]]
             
-            recommendations[user_id] = top_items
+            recommendations[str(user_id)] = top_items
         
         print(f"✓ Generated recommendations for {len(recommendations)} users")
         

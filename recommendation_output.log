@@ -1,0 +1,25 @@
+============================================================
+Recommendation System using Cornac
+============================================================
+
+Loading data from: train_v3.csv
+✓ Loaded 147244 ratings
+  • Users: 46612
+  • Items: 21820
+  • Rating range: 1.0 - 5.0
+
+Data Statistics:
+  • Users: 46612
+  • Items: 21820
+  • Ratings: 147244
+  • Sparsity: 0.9999
+Traceback (most recent call last):
+  File "/Volumes/DATA/Master/recommendation_system/code_trainData/main.py", line 96, in <module>
+    main()
+    ~~~~^^
+  File "/Volumes/DATA/Master/recommendation_system/code_trainData/main.py", line 50, in main
+    dataset = loader.create_dataset()
+  File "/Volumes/DATA/Master/recommendation_system/code_trainData/data_loader.py", line 82, in create_dataset
+    self.dataset = Dataset.from_df(self.data, reader=reader)
+                   ^^^^^^^^^^^^^^^
+AttributeError: type object 'Dataset' has no attribute 'from_df'. Did you mean: 'from_uir'?

@@ -76,11 +76,12 @@ class RecommendationDataLoader:
         if self.data is None:
             return None
         
-        # Create reader
-        reader = Reader(fmt=fmt)
+        # Convert to list of tuples for cornac format
+        # cornac expects: (user_id, item_id, rating)
+        uir_list = self.data[['user_id', 'item_id', 'rating']].values.tolist()
         
-        # Create dataset
-        self.dataset = Dataset.from_df(self.data, reader=reader)
+        # Create dataset using from_uir
+        self.dataset = Dataset.from_uir(uir_list)
         
         print(f"✓ Dataset created with {self.dataset.num_users} users and {self.dataset.num_items} items")
         

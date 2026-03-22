@@ -1,6 +1,6 @@
 # Recommendation System using Cornac
 
-A Python-based recommendation system that uses the Cornac library to recommend top products for users.
+A Python-based recommendation system that uses the Cornac library to recommend top products for users based on user-item-rating data.
 
 ## Features
 
@@ -9,6 +9,7 @@ A Python-based recommendation system that uses the Cornac library to recommend t
 - **NMF (Non-negative Matrix Factorization)**: Non-negative matrix factorization approach
 - Flexible configuration for model parameters
 - Efficient batch recommendations for all users
+- CSV data format support
 
 ## File Structure
 
@@ -18,84 +19,94 @@ A Python-based recommendation system that uses the Cornac library to recommend t
 ├── data_loader.py           # Data loading and preprocessing module
 ├── recommender.py           # Recommendation system module
 ├── main.py                  # Main entry point
+├── RUN.sh                   # Quick run script
 ├── README.md               # This file
-└── training_data.txt       # Your training data (to be provided)
+└── train_v3.csv            # Your training data (CSV format)
 ```
 
 ## Installation
 
-1. Install dependencies:
+1. Create a virtual environment and install dependencies:
 ```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ## Data Format
 
-Your training data should be in the following format:
-
-```
-person_id item_id_1 item_id_2 ... item_id_50
-person_id item_id_1 item_id_2 ... item_id_50
-...
-```
+Your training data should be a CSV file with 3 columns: **user_id**, **item_id**, **rating**
 
 **Example:**
 ```
-0 1 5 12 23 45 67 89 102 154 ...
-1 2 8 15 34 56 78 90 111 200 ...
-2 3 9 18 42 62 84 105 123 234 ...
+user_id,item_id,rating
+1494,1,4
+1494,2,5
+9808,3,1
+9808,4,3
+19854,5,5
 ```
 
-- Each line starts with a person/user ID
-- Followed by the item IDs that this person has interacted with (50 items in your case)
-- Spaces separate the IDs
+- **user_id**: ID of the user/person
+- **item_id**: ID of the product/item
+- **rating**: Rating/score (numeric value)
 
 ## Usage
 
-### Basic Usage
+### Quick Start
 
 ```bash
-python main.py training_data.txt
+# Activate virtual environment
+source venv/bin/activate
+
+# Run with your CSV data, Matrix Factorization model, top 50 recommendations
+python3 main.py train_v3.csv MF 50
 ```
 
-This will:
-- Load the training data
-- Train a Matrix Factorization model by default
-- Generate top 10 recommendations for each user
-- Save results to `training_data_recommendations.txt`
+Or use the provided script:
+```bash
+chmod +x RUN.sh
+./RUN.sh
+```
 
-### Advanced Usage
+### Full Usage
 
 ```bash
-python main.py <training_file> <model_name> <num_recommendations>
+python3 main.py <csv_file> <model_name> <num_recommendations>
 ```
 
 **Parameters:**
-- `<training_file>`: Path to your training data file
+- `<csv_file>`: Path to your CSV training data file
 - `<model_name>`: Model algorithm ('MF', 'BPR', or 'NMF')
-- `<num_recommendations>`: Number of items to recommend per user
+- `<num_recommendations>`: Number of items to recommend per user (default: 10)
 
 **Examples:**
 
 ```bash
 # Use BPR model and get top 15 recommendations
-python main.py training_data.txt BPR 15
+python3 main.py train_v3.csv BPR 15
 
-# Use NMF model and get top 20 recommendations
-python main.py training_data.txt NMF 20
+# Use NMF model and get top 50 recommendations
+python3 main.py train_v3.csv NMF 50
+
+# Use default (MF model) with top 20 recommendations
+python3 main.py train_v3.csv MF 20
 ```
 
 ## Output
 
-The output file will be in the same format as the input:
+The output file will be generated as: `<input_file>_recommendations.txt`
 
+**Format:** Each line contains the user ID followed by their top N recommended item IDs
+
+**Example output (train_v3_recommendations.txt):**
 ```
-person_id item_id_1 item_id_2 ... item_id_N
-person_id item_id_1 item_id_2 ... item_id_N
-...
+1494 234 567 890 123 456 ...
+9808 345 678 901 234 567 ...
+19854 456 789 12 345 678 ...
 ```
 
-Where each line contains the user ID followed by their top N recommended item IDs.
+Where each number is a product/item ID recommended for that user.
 
 ## Model Parameters
 
@@ -111,36 +122,37 @@ Adjust these values in the `RecommenderSystem` initialization based on your need
 
 ## Example Workflow
 
-1. Prepare your training data in the required format
-2. Place it in this directory (e.g., `training_data.txt`)
+1. Ensure your training data is in CSV format with columns: `user_id`, `item_id`, `rating`
+2. Place your CSV file in this directory (e.g., `train_v3.csv`)
 3. Run the system:
    ```bash
-   python main.py training_data.txt MF 10
+   source venv/bin/activate
+   python3 main.py train_v3.csv MF 50
    ```
-4. Check the output file: `training_data_recommendations.txt`
+4. Check the output file: `train_v3_recommendations.txt`
+   - Each line: `user_id recommended_item_1 recommended_item_2 ... recommended_item_50`
 
 ## Troubleshooting
 
-- **Module not found**: Make sure all dependencies are installed with `pip install -r requirements.txt`
-- **Data format error**: Verify your training data follows the required format (space-separated IDs)
-- **File not found**: Check that the training data file path is correct
+- **Module not found**: Make sure virtual environment is activated and dependencies installed:
+  ```bash
+  source venv/bin/activate
+  pip install -r requirements.txt
+  ```
+- **CSV format error**: Verify your CSV has columns: `user_id`, `item_id`, `rating`
+- **File not found**: Check that the CSV file path is correct
 
-## Algorithm Explanations
+## Model Parameters
 
-### Matrix Factorization (MF)
-Decomposes the user-item interaction matrix into two lower-rank matrices representing user and item latent factors. Good for dense interactions.
+You can modify model parameters in `main.py`. Default values:
 
-### BPR (Bayesian Personalized Ranking)
-Optimized for implicit feedback (binary interactions). Learns from user preferences through pairwise comparisons.
+- **k**: Number of latent dimensions (default: 10)
+- **learning_rate**: Learning rate for optimization (default: 0.001)
+- **lambda_u**: Regularization for user factors (default: 0.01)
+- **lambda_i**: Regularization for item factors (default: 0.01)
+- **max_iter**: Number of training iterations (default: 100)
 
-### NMF (Non-negative Matrix Factorization)
-Similar to MF but ensures non-negative factors, which can be more interpretable. Good for count-based interactions.
-
-## Requirements
-
-- Python 3.7+
-- cornac >= 1.3.0
-- numpy >= 1.21.0
-- scipy >= 1.7.0
-- pandas >= 1.3.0
-- scikit-learn >= 0.24.0
+Adjust these values based on your data size and hardware:
+- **Larger datasets**: Increase `max_iter` (200-500)
+- **More personalization**: Decrease `learning_rate` (0.0001-0.0005)
+- **Better accuracy**: Increase `k` (15-20)
