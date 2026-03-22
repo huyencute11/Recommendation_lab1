@@ -161,16 +161,21 @@ class RecommenderSystem:
     
     def save_recommendations_to_file(self, recommendations, output_file):
         """
-        Save recommendations to file (one user per line with recommended items)
+        Save recommendations to file (one user per line with recommended items only)
+        Format: itemId1 itemId2 itemId3 ... (NO user_id, sorted by score descending)
         
         Args:
             recommendations (dict): Recommendation dictionary from recommend_all_users()
             output_file (str): Output file path
         """
         with open(output_file, 'w') as f:
+            # Sort users by their ID to maintain line order
             for user_id in sorted(recommendations.keys(), key=lambda x: int(x) if x.isdigit() else x):
                 items = recommendations[user_id]
-                line = f"{user_id} " + " ".join(str(item) for item in items)
+                # Write only items, no user_id (items already sorted by score descending)
+                line = " ".join(str(item) for item in items)
                 f.write(line + "\n")
         
         print(f"✓ Saved recommendations to {output_file}")
+        print(f"  Format: Each line = items only (sorted by suitability descending)")
+        print(f"  Line index = user ID")
