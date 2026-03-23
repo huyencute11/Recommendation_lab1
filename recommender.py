@@ -3,7 +3,7 @@ Recommendation System using Cornac
 Recommends top items for each user
 """
 import numpy as np
-from cornac.models import MF, BPR, NMF
+from cornac.models import MF, BPR, NMF, PMF
 from data_loader import RecommendationDataLoader
 
 
@@ -31,26 +31,34 @@ class RecommenderSystem:
         
         # Default parameters for models
         mf_params = {
-            'k': self.kwargs.get('k', 10),  # latent dimensions
-            'learning_rate': self.kwargs.get('learning_rate', 0.01),
-            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),  # regularization
-            'max_iter': self.kwargs.get('max_iter', 100),
+            'k': self.kwargs.get('k', 50),  # latent dimensions
+            'learning_rate': self.kwargs.get('learning_rate', 0.05),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.001),
+            'max_iter': self.kwargs.get('max_iter', 200),
+            'verbose': self.kwargs.get('verbose', True)
+        }
+        
+        pmf_params = {
+            'k': self.kwargs.get('k', 50),
+            'learning_rate': self.kwargs.get('learning_rate', 0.001),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.001),
+            'max_iter': self.kwargs.get('max_iter', 200),
             'verbose': self.kwargs.get('verbose', True)
         }
         
         bpr_params = {
-            'k': self.kwargs.get('k', 10),
-            'learning_rate': self.kwargs.get('learning_rate', 0.01),
-            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),
-            'max_iter': self.kwargs.get('max_iter', 100),
+            'k': self.kwargs.get('k', 50),
+            'learning_rate': self.kwargs.get('learning_rate', 0.05),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.001),
+            'max_iter': self.kwargs.get('max_iter', 200),
             'verbose': self.kwargs.get('verbose', True)
         }
         
         nmf_params = {
-            'k': self.kwargs.get('k', 10),
-            'learning_rate': self.kwargs.get('learning_rate', 0.01),
-            'lambda_reg': self.kwargs.get('lambda_reg', 0.01),
-            'max_iter': self.kwargs.get('max_iter', 100),
+            'k': self.kwargs.get('k', 50),
+            'learning_rate': self.kwargs.get('learning_rate', 0.05),
+            'lambda_reg': self.kwargs.get('lambda_reg', 0.001),
+            'max_iter': self.kwargs.get('max_iter', 200),
             'verbose': self.kwargs.get('verbose', True)
         }
         
@@ -58,18 +66,22 @@ class RecommenderSystem:
             self.model = MF(**mf_params)
             print(f"✓ Initialized Matrix Factorization model")
             
+        elif self.model_name == 'PMF':
+            self.model = PMF(**pmf_params)
+            print(f"✓ Initialized Probabilistic Matrix Factorization model")
+            
         elif self.model_name == 'BPR':
             self.model = BPR(**bpr_params)
-            print(f"✓ Initialized BPR model")
+            print(f"✓ Initialized BPR (Bayesian Personalized Ranking) model")
             
         elif self.model_name == 'NMF':
             self.model = NMF(**nmf_params)
             print(f"✓ Initialized NMF model")
             
         else:
-            # Default to MF
-            self.model = MF(**mf_params)
-            print(f"✓ Model '{self.model_name}' not recognized, using Matrix Factorization")
+            # Default to PMF
+            self.model = PMF(**pmf_params)
+            print(f"✓ Model '{self.model_name}' not recognized, using PMF")
     
     def fit(self):
         """Train the recommendation model"""
@@ -119,7 +131,7 @@ class RecommenderSystem:
             num_recommendations (int): Number of items to recommend per user
         
         Returns:
-            dict: Dictionary with user_id as key and list of recommended items as value
+            dict: Dictionary with user_iid (0-indexed) as key and list of recommended items as value
         """
         recommendations = {}
         
@@ -134,7 +146,7 @@ class RecommenderSystem:
         num_users = self.dataset.num_users
         
         for user_iid in range(num_users):
-            # Get the original user ID
+            # Get the original user ID (just for reference, we'll use user_iid for output)
             user_id = user_ids[user_iid]
             
             # Get scores for all items
@@ -153,7 +165,8 @@ class RecommenderSystem:
             item_scores.sort(key=lambda x: x[1], reverse=True)
             top_items = [str(item_id) for item_id, score in item_scores[:num_recommendations]]
             
-            recommendations[str(user_id)] = top_items
+            # Use user_iid (0-indexed position) as key, NOT original user_id
+            recommendations[user_iid] = top_items
         
         print(f"✓ Generated recommendations for {len(recommendations)} users")
         
@@ -162,20 +175,22 @@ class RecommenderSystem:
     def save_recommendations_to_file(self, recommendations, output_file):
         """
         Save recommendations to file (one user per line with recommended items only)
-        Format: itemId1 itemId2 itemId3 ... (NO user_id, sorted by score descending)
+        Format: itemId1 itemId2 itemId3 ... (NO user_id, line index = user index)
         
         Args:
-            recommendations (dict): Recommendation dictionary from recommend_all_users()
+            recommendations (dict): Recommendation dictionary with user_iid as key
             output_file (str): Output file path
         """
         with open(output_file, 'w') as f:
-            # Sort users by their ID to maintain line order
-            for user_id in sorted(recommendations.keys(), key=lambda x: int(x) if x.isdigit() else x):
-                items = recommendations[user_id]
-                # Write only items, no user_id (items already sorted by score descending)
-                line = " ".join(str(item) for item in items)
-                f.write(line + "\n")
+            # Output in order of user_iid (0, 1, 2, 3...)
+            num_users = len(recommendations)
+            for user_iid in range(num_users):
+                if user_iid in recommendations:
+                    items = recommendations[user_iid]
+                    # Write only items (already sorted by score descending)
+                    line = " ".join(str(item) for item in items)
+                    f.write(line + "\n")
         
         print(f"✓ Saved recommendations to {output_file}")
         print(f"  Format: Each line = items only (sorted by suitability descending)")
-        print(f"  Line index = user ID")
+        print(f"  Line index = user index (0, 1, 2, ...)")

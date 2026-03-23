@@ -14,7 +14,9 @@ def main():
         python main.py <training_data_file> [model_name] [num_recommendations]
     
     Example:
-        python main.py training_data.txt MF 10
+        python main.py train_v3.csv PMF 50
+    
+    Model options: 'PMF' (Probabilistic MF - RECOMMENDED), 'MF', 'BPR', 'NMF'
     """
     
     # Get arguments
@@ -53,13 +55,14 @@ def main():
         sys.exit(1)
     
     # Initialize and train recommender
+    # Optimized hyperparameters for better performance
     recommender = RecommenderSystem(
         dataset,
         model_name=model_name,
-        k=10,
-        learning_rate=0.01,
-        lambda_reg=0.01,
-        max_iter=100,
+        k=50,  # Increased latent dimensions for better representation
+        learning_rate=0.05,  # Higher learning rate for faster convergence
+        lambda_reg=0.001,  # Lower regularization to avoid underfitting
+        max_iter=200,  # More iterations for better training
         verbose=True
     )
     
@@ -73,7 +76,7 @@ def main():
     print(f"Sample Recommendations (showing first 5 users):")
     print(f"{'='*60}")
     
-    user_ids = sorted(recommendations.keys(), key=lambda x: int(x) if x.isdigit() else x)
+    user_ids = sorted(recommendations.keys())
     for user_id in user_ids[:5]:
         items = recommendations[user_id]
         print(f"User {user_id}: {' '.join(str(item) for item in items)}")
