@@ -1,7 +1,6 @@
 """
-Enhanced Data Loader with implicit feedback conversion and negative sampling
+Enhanced Data Loader with implicit feedback conversion.
 """
-import numpy as np
 import pandas as pd
 from cornac.data import Dataset
 
@@ -9,7 +8,7 @@ from cornac.data import Dataset
 class EnhancedDataLoader:
     """Enhanced loader with implicit feedback and negative sampling"""
     
-    def __init__(self, data_file_path, rating_threshold=3.0):
+    def __init__(self, data_file_path, rating_threshold=3.0, ensure_all_users=True):
         """
         Initialize enhanced data loader
         
@@ -19,6 +18,7 @@ class EnhancedDataLoader:
         """
         self.data_file_path = data_file_path
         self.rating_threshold = rating_threshold
+        self.ensure_all_users = ensure_all_users
         self.data = None
         self.dataset = None
     
@@ -71,6 +71,27 @@ class EnhancedDataLoader:
         
         # Keep only positive interactions
         implicit_data = self.data[self.data['implicit'] == 1].copy()
+
+        if self.ensure_all_users:
+            all_users = set(self.data["user_id"].unique())
+            users_with_positive = set(implicit_data["user_id"].unique())
+            missing_users = all_users - users_with_positive
+            if missing_users:
+                fallback_rows = (
+                    self.data[self.data["user_id"].isin(missing_users)]
+                    .sort_values(["user_id", "rating"], ascending=[True, False])
+                    .groupby("user_id", as_index=False)
+                    .head(1)
+                    .copy()
+                )
+                fallback_rows["implicit"] = 1
+                implicit_data = pd.concat([implicit_data, fallback_rows], ignore_index=True)
+                print(
+                    f"  • Added fallback positives for users without rating >= {self.rating_threshold}: "
+                    f"{len(fallback_rows)}"
+                )
+
+        implicit_data = implicit_data.drop_duplicates(subset=["user_id", "item_id"])
         
         print(f"\n✓ Converted to implicit feedback (rating >= {self.rating_threshold}):")
         print(f"  • Kept interactions: {len(implicit_data)}")
@@ -90,9 +111,11 @@ class EnhancedDataLoader:
         if implicit_data is None:
             return None
         
-        # Convert to list of tuples for cornac format (user_id, item_id)
-        # For implicit feedback, we only need (user, item) pairs
-        uir_list = implicit_data[['user_id', 'item_id']].values.tolist()
+        # Convert to cornac format (user_id, item_id, rating) with implicit rating=1.0
+        uir_list = [
+            (user, item, 1.0)
+            for user, item in implicit_data[["user_id", "item_id"]].values.tolist()
+        ]
         
         # Create dataset using from_uir - implicit feedback
         self.dataset = Dataset.from_uir(uir_list)
